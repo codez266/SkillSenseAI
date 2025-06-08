@@ -1,0 +1,7 @@
+flask
+flask-cors
+python-dotenv
+peewee
+fire
+pgmpy
+git+ssh://git@github.com/comp-hci-lab/adaptive_learning_concepts.git
