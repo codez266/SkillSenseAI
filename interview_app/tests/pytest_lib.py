@@ -1,7 +1,7 @@
 import pytest
 from peewee import SqliteDatabase
 
-from app import create_app
+from skillsense_ai import create_app
 from db.db_utils import tables_alllocal, init_memory_db, init_test_db, populate_test_db
 from db.models import database_proxy
 

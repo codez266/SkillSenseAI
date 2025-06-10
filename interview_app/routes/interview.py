@@ -7,9 +7,9 @@ from adaptive_concept_selection.db.db_utils import init_test_db
 from adaptive_concept_selection.question_generation.question_generation_cg import SimulatedStudentExperiment
 from adaptive_concept_selection.db.models import database_proxy as acs_db_proxy
 
-from flask import Blueprint, jsonify, session, request, current_app
+from flask import Blueprint, jsonify, session, request, current_app, redirect, url_for
 from datetime import datetime
-from db.models import Student, StudentInterviewRecord, InterviewConversation, Artifact, database_proxy
+from db.models import Student, StudentArtifact, StudentInterviewRecord, InterviewConversation, Artifact, database_proxy
 from db.config import CONFIG
 
 bp = Blueprint('interview', __name__, url_prefix='/api')
@@ -39,14 +39,14 @@ def interview(student_type):
 
     try:
         # Check if we already have a student_type_id in session
-        student_type_id = session.get('student_type_id')
-        interview_id = session.get('interview_id')
+        # student_type_id = session.get('student_type_id')
+        # interview_id = session.get('interview_id')
 
-        if student_type_id and interview_id:
-            return jsonify({
-                'student_type_id': student_type_id,
-                'interview_id': interview_id
-            }), 200
+        # if student_type_id and interview_id:
+        #     return jsonify({
+        #         'student_type_id': student_type_id,
+        #         'interview_id': interview_id
+        #     }), 200
 
         # Create a new student with default values
         student = Student.create(
@@ -64,6 +64,13 @@ def interview(student_type):
             ).order_by(fn.Random()).limit(1).get_or_none()
             artifact_id = artifact.artifact_id if artifact else None
 
+            student_artifact = StudentArtifact.create(
+                student_type_id=student.student_type_id,
+                problem_solution=artifact.artifact_value
+            )
+
+            student_artifact.save()
+
             if not artifact:
                 return jsonify({
                 'error': 'No artifact found for the given student type'
@@ -74,18 +81,19 @@ def interview(student_type):
             interview_student_type_id=student.student_type_id,
             interview_timestamp=datetime.now(),
             interview_metadata=None,
-            interview_problem_id=artifact_id,
-            interview_policy=None
+            interview_problem_id=student_artifact.problem_id,
+            interview_policy=1
         )
         interview.save()
 
         # Store IDs in session
-        session['student_type_id'] = student.student_type_id
-        session['interview_id'] = interview.interview_id
+        # session['student_type_id'] = student.student_type_id
+        # session['interview_id'] = interview.interview_id
 
         return jsonify({
             'student_type_id': student.student_type_id,
-            'interview_id': interview.interview_id
+            'interview_id': interview.interview_id,
+            'student_artifact': artifact.artifact_value
         }), 201
 
     except Exception as e:
@@ -94,11 +102,71 @@ def interview(student_type):
             'error': str(e)
         }), 500
 
-@bp.route('/conversation/interviewer', methods=['GET'])
-def conversation_interviewer():
-    error_response, interview_id, interview_record, _ = get_interview_details()
-    if error_response:
-        return error_response
+@bp.route('/interview/record/<int:interview_id>', methods=['GET'])
+def get_interview_record(interview_id):
+    try:
+        interview_record = StudentInterviewRecord.select().where(StudentInterviewRecord.interview_id==interview_id).get_or_none()
+        if not interview_record:
+            return jsonify({'error': 'Interview not found'}), 404
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving interview: {str(e)}")
+        return jsonify({'error': 'Interview not found'}), 404
+
+    # Convert the interview record to a dictionary
+    interview_data = {
+        'interview_id': interview_record.interview_id,
+        'student_type_id': interview_record.interview_student_type_id,
+        'problem_id': interview_record.interview_problem_id,
+        'timestamp': interview_record.interview_timestamp.isoformat(),
+        'metadata': interview_record.interview_metadata,
+        'policy': interview_record.interview_policy
+    }
+
+    return jsonify(interview_data), 200
+
+@bp.route('/conversation/interview/end/<int:interview_id>', methods=['GET'])
+def end_interview(interview_id):
+    """End the current interview session."""
+    interview_record = None
+    try:
+        interview_record = StudentInterviewRecord.select().where(StudentInterviewRecord.interview_id==interview_id).get_or_none()
+        if not interview_record:
+            return jsonify({'error': 'Interview not found'}), 404
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving interview: {str(e)}")
+        return jsonify({'error': 'Interview not found'}), 404
+
+    # End the interview by updating the record
+    try:
+        simulator = current_app.config["simulator"]
+        simulator.initialize_db_proxy(current_app.db)
+        obs, _ = simulator.reset(interview_id)
+        total_conversation_turns = len(obs["conversation_history_data"])
+        turn_start = obs["conversation_history_data"][0].conversation_timestamp if total_conversation_turns > 0 else None
+        turn_end = obs["conversation_history_data"
+        ][-1].conversation_timestamp if total_conversation_turns > 0 else None
+        interview_duration = str(turn_end - turn_start) if turn_start and turn_end else None
+        # Convert interview duration into a human-readable format
+
+        return jsonify({
+            'status': 'Interview ended successfully',
+            'total_conversation_turns': total_conversation_turns,
+            'total_time_taken': interview_duration,
+            'interview_id': interview_id
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Error ending interview: {str(e)}")
+        return jsonify({'error': 'Failed to end interview'}), 500
+
+@bp.route('/conversation/interviewer/<int:interview_id>', methods=['GET'])
+def conversation_interviewer(interview_id):
+    try:
+        interview_record = StudentInterviewRecord.select().where(StudentInterviewRecord.interview_id==interview_id).get_or_none()
+        if not interview_record:
+            return jsonify({'error': 'Interview not found'}), 404
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving interview: {str(e)}")
+        return jsonify({'error': 'Interview not found'}), 404
     # Get the conversation
     # conversations = InterviewConversation.select().where(
     #     InterviewConversation.conversation_interview_id == interview_id
@@ -113,19 +181,20 @@ def conversation_interviewer():
     #simulator = current_app.config["simulator"]
     creds_file = "azure_auth.json"
     simulator = current_app.config["simulator"]
-    acs_db_proxy.initialize(simulator.db)
-    # simulator = SimulatedStudentExperiment(logger=current_app.logger, test_db=current_app.db, db_config=CONFIG, llm_creds=creds_file, simulation=True)
+    simulator.initialize_db_proxy(current_app.db)
     obs, _ = simulator.reset(interview_id)
-    obs, _, done, _, _ = simulator.step()
+    obs, _, done, _, _ = simulator.step(turn_id=0)
+
+    # If the interview is done, we need to redirect to the end of the interview.
     if done:
-        return jsonify({
-            "status": "Interview has already ended."
-        }), 200
+        return redirect(url_for("interview.end_interview", interview_id=interview_id))
+
     conversations = obs["conversation_history"]
     last_response = conversations[-1] if conversations else None
     last_reply = last_response.conversation_response if last_response else None
     last_metadata = json.loads(
         last_response.conversation_metadata if last_response else {})
+    last_metadata["student_artifact"] = obs["artifact"].problem_solution
 
     # Return the question
     return jsonify({
@@ -134,19 +203,29 @@ def conversation_interviewer():
         "status": "success"
     }), 200
 
+@bp.route('/conversation/student/<int:interview_id>', methods=['POST'])
+@bp.route('/conversation/student/<int:interview_id>', methods=['GET'])
+def conversation_student(interview_id):
+    try:
+        interview_record = StudentInterviewRecord.select().where(StudentInterviewRecord.interview_id==interview_id).get_or_none()
+        if not interview_record:
+            return jsonify({'error': 'Interview not found'}), 404
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving interview: {str(e)}")
+        return jsonify({'error': 'Interview not found'}), 404
 
-@bp.route('/conversation/student', methods=['POST'])
-def conversation_student():
-    error_response, interview_id, interview, _ = get_interview_details()
-    if error_response:
-        return error_response
-    student_answer = request.json.get("response")
+    student_answer = None
+    if "response" in request.args:
+        student_answer = request.args.get("response")
+    elif "response" in request.json:
+        student_answer = request.json.get("response")
     simulator = current_app.config["simulator"]
-    acs_db_proxy.initialize(simulator.db)
+    simulator.initialize_db_proxy(current_app.db)
     # This will resume the experiment with the given interview_id
     obs, _ = simulator.reset(interview_id)
-    obs, _, done, _, _ = simulator.step(student_answer)
-    conversations = obs["conversation_history"]
+    obs, _, done, _, _ = simulator.step(action=student_answer, turn_id=1)
+
+    conversations = obs["conversation_history_data"]
 
     last_response = conversations[-1] if conversations else None
     last_reply = last_response.conversation_response if last_response else None
@@ -156,7 +235,7 @@ def conversation_student():
 
     # Return the question
     return jsonify({
-        "answer": last_reply,
+        "processed_answer": last_reply,
         "reference_answer": reference_answer,
         "metadata": last_metadata,
         "status": "success"

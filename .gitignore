@@ -1,0 +1,57 @@
+# Node (React frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*
+frontend/.DS_Store
+
+# Python (Flask + Peewee backend)
+interview_app/__pycache__/
+interview_app/**/*.pyc
+interview_app/instance/
+interview_app/agent.db
+interview_app/*.db
+interview_app/.env
+interview_app/.DS_Store
+interview_app/venv/
+interview_app/.venv/
+interview_app/.pytest_cache/
+.venv/
+.env
+
+# macOS
+.DS_Store
+
+# General
+.env
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+*.pot
+*.mo
+*.swp
+*~
+.idea/
+.vscode/
+__pycache__/
+**/__pycache__/
+
+# Test & coverage
+.coverage
+.tox/
+.nox/
+.pytest_cache/
+htmlcov/
+coverage.xml
+
+# Misc
+*.bak
+*.tmp
+
+# Ignore secrets
+interview_app/azure_auth.json
+interview_app/config.ini
+config.ini

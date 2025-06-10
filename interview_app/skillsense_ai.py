@@ -67,10 +67,12 @@ def create_app(test_config=None):
     creds_file = "azure_auth.json"
     logger = app.logger
 
-    if not (app.config['TESTING'] and app.config['DEBUG']):
-        # If not testing, use the real database
+    if app.config['TESTING']:
+        app.db = init_test_db()
+    else:
         app.db = init_real_db(config=CONFIG)
-    app.config["simulator"] = SimulatedStudentExperiment(logger=logger, db_config=CONFIG, llm_creds=creds_file, simulation=True)
+
+    app.config["simulator"] = SimulatedStudentExperiment(logger=logger, db_config=CONFIG, simulation=False, llm_creds=creds_file, question_limit=int(CONFIG.get("app", "turns")))
 
     # a simple page that says hello
     @app.route('/hello')

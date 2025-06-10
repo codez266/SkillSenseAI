@@ -1,4 +1,4 @@
-from app import create_app
+from skillsense_ai import create_app
 from defaultsettings import config
 import string
 import secrets

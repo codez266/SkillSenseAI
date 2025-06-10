@@ -28,11 +28,11 @@ class InterviewConversation(BaseModel):
     conversation_k_cs = CharField(column_name='conversation_KCs', null=True)
     conversation_id = AutoField()
     conversation_interview_id = IntegerField(null=True)
-    conversation_is_response_question = IntegerField(null=True)
     conversation_metadata = TextField(null=True)
     conversation_reference = CharField(null=True)
     conversation_reference_kcs = CharField(null=True)
     conversation_response = CharField(null=True)
+    conversation_responded = IntegerField(null=True)
     conversation_timestamp = DateTimeField(null=True)
     conversation_turn_id = IntegerField(null=True)
 

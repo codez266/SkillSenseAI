@@ -4,4 +4,5 @@ python-dotenv
 peewee
 fire
 pgmpy
+pytest
 git+ssh://git@github.com/comp-hci-lab/adaptive_learning_concepts.git

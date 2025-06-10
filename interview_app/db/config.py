@@ -11,7 +11,7 @@ import os
 def create_config(config_file=None):
 
     if config_file is None:
-        config_file = 'db/config.ini'
+        config_file = 'config.ini'
 
     parser = configparser.ConfigParser()
 
