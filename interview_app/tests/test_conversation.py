@@ -54,7 +54,7 @@ def interview_conversation_helper(app, client, policy_id):
     response = client.get("/api/interview/beginner")
     assert response.status_code == 201
     data = response.get_json()
-    assert "student_type_id" in data
+    assert "student_id" in data
     assert "interview_id" in data
 
     interview_id = data['interview_id']

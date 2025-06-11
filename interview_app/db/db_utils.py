@@ -66,13 +66,13 @@ def write_student_artifact():
             student = Student.get_or_none(Student.student_level==level)
             student_id = student.student_type_id
             problem_records.append((problem_statement, problem_solution, problem_kcs, student_id))
-            artifacts.append((level, problem_solution))
+            artifacts.append((level, problem_statement, problem_solution))
     StudentArtifact.insert_many(problem_records, fields=[
         StudentArtifact.problem_statement, StudentArtifact.problem_solution,
         StudentArtifact.extracted_kcs,
-        StudentArtifact.student_type_id]).execute()
+        StudentArtifact.student_id]).execute()
     Artifact.insert_many(artifacts, fields=[
-        Artifact.artifact_level, Artifact.artifact_value]).execute()
+        Artifact.artifact_level, Artifact.artifact_problem, Artifact.artifact_value]).execute()
 
 def write_student_profile():
     john = json.loads((importlib.resources.files("adaptive_concept_selection.resources.json") / "knowledge_john.json").read_text())

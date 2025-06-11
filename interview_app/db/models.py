@@ -19,6 +19,7 @@ class Artifact(BaseModel):
     artifact_id = AutoField()
     artifact_level = CharField(null=True)
     artifact_metadata = UnknownField(null=True)  # json
+    artifact_problem = CharField(null=True)
     artifact_value = TextField(null=True)
 
     class Meta:
@@ -63,11 +64,12 @@ class Student(BaseModel):
         table_name = 'student'
 
 class StudentArtifact(BaseModel):
+    artifact_id = IntegerField(null=True)
     extracted_kcs = CharField(null=True)
-    problem_id = AutoField()
     problem_solution = TextField(null=True)
     problem_statement = CharField(null=True)
-    student_type_id = IntegerField(null=True)
+    student_artifact_id = AutoField()
+    student_id = IntegerField(null=True)
 
     class Meta:
         table_name = 'student_artifact'

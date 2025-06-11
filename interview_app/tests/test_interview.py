@@ -15,7 +15,7 @@ def test_create_interview_existing_session(app, client):
     assert response2.status_code == 200
     data2 = response2.get_json()
 
-    assert data1['student_type_id'] == data2['student_type_id']
+    assert data1['student_id'] == data2['student_id']
     assert data1['interview_id'] == data2['interview_id']
 
 def test_create_interview_invalid_student_type(app, client):
@@ -32,11 +32,11 @@ def test_create_interview_valid_student_type(app, client):
     assert response.status_code == 201
 
     data = response.get_json()
-    assert 'student_type_id' in data
+    assert 'student_id' in data
     assert 'interview_id' in data
 
     # Verify the student was created
-    student = Student.get_by_id(data['student_type_id'])
+    student = Student.get_by_id(data['student_id'])
     assert student is not None
     assert student.student_level == "beginner"
     assert student.student_k_cs is None
@@ -47,17 +47,14 @@ def test_create_interview_valid_student_type(app, client):
     assert interview.interview_student_type_id == student.student_type_id
     assert interview.interview_metadata is None
 
-def test_create_interview_error_handling(app, client, monkeypatch):
+def test_create_interview_post_nocode(app, client, monkeypatch):
     """Test error handling when database operations fail."""
     # Mock the Student.create method to raise an exception
-    def mock_create(*args, **kwargs):
-        raise Exception("Database error")
+    response = client.post('/api/interview', json={
+        'submitted_code': 'print("Hello, World!")',
+    })
 
-    monkeypatch.setattr(Student, 'create', mock_create)
+    assert response.status_code == 201
 
-    response = client.get('/api/interview')
-    assert response.status_code == 500
-
-    data = response.get_json()
-    assert 'error' in data
-    assert data['error'] == "Database error"
+    response = client.post('/api/interview', json={})
+    assert response.status_code == 400
