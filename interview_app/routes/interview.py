@@ -11,7 +11,6 @@ from flask import Blueprint, jsonify, session, request, current_app, redirect, u
 from datetime import datetime
 from db.models import Student, StudentArtifact, StudentInterviewRecord, InterviewConversation, Artifact, database_proxy
 from db.config import CONFIG
-from db.db_utils import db_retry
 
 bp = Blueprint('interview', __name__, url_prefix='/api')
 
