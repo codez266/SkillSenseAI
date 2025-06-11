@@ -21,9 +21,8 @@ class Artifact(BaseModel):
     artifact_metadata = UnknownField(null=True)  # json
     artifact_problem = CharField(null=True)
     artifact_value = TextField(null=True)
-
-    class Meta:
-        table_name = 'Artifact'
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    updated_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
 
 class InterviewConversation(BaseModel):
     conversation_k_cs = CharField(column_name='conversation_KCs', null=True)
@@ -65,11 +64,13 @@ class Student(BaseModel):
 
 class StudentArtifact(BaseModel):
     artifact_id = IntegerField(null=True)
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
     extracted_kcs = CharField(null=True)
     problem_solution = TextField(null=True)
     problem_statement = CharField(null=True)
     student_artifact_id = AutoField()
     student_id = IntegerField(null=True)
+    updated_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
 
     class Meta:
         table_name = 'student_artifact'

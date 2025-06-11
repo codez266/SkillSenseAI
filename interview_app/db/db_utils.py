@@ -1,10 +1,12 @@
 import json
 import os
 import importlib.resources
+# from functools import wraps
 
 from peewee import *
 from db.models import StudentArtifact, StudentInterviewRecord, Student, InterviewConversation, Artifact, database_proxy
 from db.config import CONFIG
+# from db.connection_pool import ReconnectMySQLDatabase
 
 from flask import current_app, g
 
@@ -14,6 +16,19 @@ tables_alllocal = [StudentArtifact, StudentInterviewRecord, Student, InterviewCo
 tables = tables_alllocal
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+def refresh_db_proxy(db, db_proxy):
+    """Refresh the database proxy to ensure it uses the latest database connection."""
+    # Initialize database proxy if not already done
+    if db_proxy.obj is None:
+        db_proxy.initialize(db)
+
+    # Check if connection is usable (for ReconnectMySQLDatabase)
+    if hasattr(db_proxy.obj, 'is_connection_usable'):
+        if not db_proxy.obj.is_connection_usable():
+            db_proxy.obj.connect()
+    elif db_proxy.obj.is_closed():
+        db_proxy.obj.connect()
 
 def create_tables(db, reset=False):
     created = False
@@ -31,6 +46,27 @@ def init_real_db(config=None):
     'PIPES_AS_CONCAT', 'use_unicode': True, 'host': config.get('db', 'host'),
     'user': config.get('db', 'user'), 'password': config.get('db', 'password')})
     database_proxy.initialize(db)
+    database_proxy.initialize(db)
+    # db = ReconnectMySQLDatabase('adaptive_learning_concepts', **{
+    #     'charset': 'utf8',
+    #     'sql_mode': 'PIPES_AS_CONCAT',
+    #     'use_unicode': True,
+    #     'host': config.get('db', 'host'),
+    #     'user': config.get('db', 'user'),
+    #     'password': config.get('db', 'password'),
+    #     # Connection pool and timeout settings
+    #     'max_connections': 20,
+    #     'stale_timeout': 300,  # 5 minutes
+    #     'timeout': 10,
+    #     'connect_timeout': 10,
+    #     'read_timeout': 10,
+    #     'write_timeout': 10,
+    #     'autocommit': True,
+    #     'autoconnect': True,
+    #     # Custom retry settings
+    #     'max_retries': 3,
+    #     'retry_delay': 1
+    # })
     return db
 
 def init_test_db(reset=False):
@@ -122,3 +158,29 @@ def init_app(app):
     app.teardown_request(close_db)
     app.cli.add_command(init_db_command)
     app.cli.add_command(init_test_db_command)
+
+# def db_retry(max_retries=3):
+#     """Decorator to retry database operations on connection failures"""
+#     def decorator(func):
+#         @wraps(func)
+#         def wrapper(*args, **kwargs):
+#             for attempt in range(max_retries):
+#                 try:
+#                     return func(*args, **kwargs)
+#                 except (OperationalError, InterfaceError) as e:
+#                     if "gone away" in str(e).lower() or "broken pipe" in str(e).lower():
+#                         if attempt < max_retries - 1:
+#                             # Try to reconnect
+#                             try:
+#                                 if database_proxy.obj and not database_proxy.obj.is_closed():
+#                                     database_proxy.obj.close()
+#                                 database_proxy.obj.connect()
+#                             except Exception:
+#                                 pass  # Will retry on next attempt
+#                         else:
+#                             raise e
+#                     else:
+#                         raise e
+#             return func(*args, **kwargs)
+#         return wrapper
+#     return decorator

@@ -2,7 +2,7 @@ import logging
 import json
 import pdb
 
-from peewee import fn
+from peewee import fn, OperationalError, InterfaceError
 from adaptive_concept_selection.db.db_utils import init_test_db
 from adaptive_concept_selection.question_generation.question_generation_cg import SimulatedStudentExperiment
 from adaptive_concept_selection.db.models import database_proxy as acs_db_proxy
@@ -11,6 +11,7 @@ from flask import Blueprint, jsonify, session, request, current_app, redirect, u
 from datetime import datetime
 from db.models import Student, StudentArtifact, StudentInterviewRecord, InterviewConversation, Artifact, database_proxy
 from db.config import CONFIG
+from db.db_utils import db_retry
 
 bp = Blueprint('interview', __name__, url_prefix='/api')
 
@@ -116,8 +117,11 @@ def get_interview_record(interview_id):
         interview_record = StudentInterviewRecord.select().where(StudentInterviewRecord.interview_id==interview_id).get_or_none()
         if not interview_record:
             return jsonify({'error': 'Interview not found'}), 404
+    except (OperationalError, InterfaceError) as e:
+        current_app.logger.error(f"Database connection error retrieving interview {interview_id}: {str(e)}")
+        return jsonify({'error': 'Database connection error, please try again'}), 503
     except Exception as e:
-        current_app.logger.error(f"Error retrieving interview: {str(e)}")
+        current_app.logger.error(f"Error retrieving interview {interview_id}: {str(e)}")
         return jsonify({'error': 'Interview not found'}), 404
 
     # Convert the interview record to a dictionary
