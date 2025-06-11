@@ -7,3 +7,4 @@ pgmpy
 pytest
 git+ssh://git@github.com/comp-hci-lab/adaptive_learning_concepts.git
 importlib_resources
+pymysql

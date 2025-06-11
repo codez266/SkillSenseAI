@@ -46,9 +46,11 @@ def create_app(test_config=None):
 
     #db_wrapper = FlaskDB(app, database)
 
+    is_production = False
     if test_config is None:
         # load the instance config, if it exists, when not testing
         app.config.from_object(config['production'])
+        is_production = True
     else:
         # load the test config if passed in
         app.config.from_object(test_config)
@@ -72,7 +74,7 @@ def create_app(test_config=None):
     else:
         app.db = init_real_db(config=CONFIG)
 
-    app.config["simulator"] = SimulatedStudentExperiment(logger=logger, db_config=CONFIG, simulation=False, llm_creds=creds_file, question_limit=int(CONFIG.get("app", "turns")))
+    app.config["simulator"] = SimulatedStudentExperiment(logger=logger, db_config=CONFIG, simulation=False, llm_creds=creds_file, question_limit=int(CONFIG.get("app", "turns")), prod=is_production)
 
     # a simple page that says hello
     @app.route('/hello')
