@@ -11,10 +11,11 @@ import PersonIcon from '@mui/icons-material/Person'
 import Editor from '@monaco-editor/react'
 import './App.css'
 
-const API_URL = 'http://localhost:9003/api';
+const API_URL = 'https://comphcithree.eecs.umich.edu:8100';
 
 function App() {
   const [code, setCode] = useState('// Write your code here\n')
+  const [problemStatement, setProblemStatement] = useState('')
   const [messages, setMessages] = useState([
     { text: "Hey, how can I help?", sender: 'assistant', timestamp: '1m' }
   ])
@@ -27,7 +28,7 @@ function App() {
   useEffect(() => {
     const initializeInterview = async () => {
       try {
-        const response = await fetch(`${API_URL}/create_interview`, {
+        const response = await fetch(`${API_URL}/api/interview/beginner`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -41,6 +42,8 @@ function App() {
         }
         const data = await response.json();
         setInterviewData(data);
+        setProblemStatement(data.problem_statement);
+        setCode(data.student_artifact || '// Write your code here\n');
         setIsInitialized(true);
         console.log('Interview session created:', data);
       } catch (err) {
@@ -101,6 +104,18 @@ function App() {
       <Grid container sx={{ height: '100%' }}>
         {/* Left Panel */}
         <Grid item xs={12} md={6} sx={{ height: '100%', p: 3, display: 'flex', flexDirection: 'column' }}>
+          {/* Problem Statement Section */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ color: '#1976d2' }}>
+              Problem Statement
+            </Typography>
+            <Paper sx={{ p: 2, bgcolor: '#f8f9fa' }}>
+              <Typography variant="body1">
+                {problemStatement}
+              </Typography>
+            </Paper>
+          </Box>
+
           {/* Code Editor Section */}
           <Box sx={{ height: '50%', mb: 3 }}>
             <Typography variant="h6" gutterBottom sx={{ color: '#1976d2' }}>
@@ -141,15 +156,15 @@ function App() {
             <Typography variant="h6" gutterBottom sx={{ color: '#1976d2' }}>
               Additional Information
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" component="div">
               This section can contain:
-              <ul style={{ marginLeft: '20px', marginTop: '8px' }}>
-                <li>Problem description</li>
-                <li>Test cases</li>
-                <li>Expected output</li>
-                <li>Hints or constraints</li>
-              </ul>
             </Typography>
+            <ul style={{ marginLeft: '20px', marginTop: '8px', color: 'text.secondary' }}>
+              <li>Problem description</li>
+              <li>Test cases</li>
+              <li>Expected output</li>
+              <li>Hints or constraints</li>
+            </ul>
           </Box>
         </Grid>
 
