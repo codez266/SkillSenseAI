@@ -35,6 +35,7 @@ class InterviewConversation(BaseModel):
     conversation_responded = IntegerField(null=True)
     conversation_timestamp = DateTimeField(null=True)
     conversation_turn_id = IntegerField(null=True)
+    conversation_turn_number = IntegerField(null=True)
 
     class Meta:
         table_name = 'interview_conversation'
