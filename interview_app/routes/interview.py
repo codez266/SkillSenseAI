@@ -58,7 +58,6 @@ def interview(student_type):
             artifact.save()
         elif student_type:
             # Sample an artifact for the student
-            pdb.set_trace()
             artifact = Artifact.select().where(
                 Artifact.artifact_level == student_type
             ).order_by(rand_fn()).limit(1).get_or_none()
