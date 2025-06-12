@@ -17,6 +17,9 @@ bp = Blueprint('interview', __name__, url_prefix='/api')
 @bp.route('/interview', defaults={'student_type': None}, methods=['POST'])
 @bp.route('/interview/<string:student_type>', methods=['GET'])
 def interview(student_type):
+    rand_fn = fn.Rand
+    if current_app.config['TESTING']:
+        rand_fn = fn.Random
     types = ['beginner', 'intermediate', 'advanced']
     # If student type is provided in a route, it should be one of the types.
     # If not provided, a student with a None type is created to be estimated later.
@@ -55,9 +58,10 @@ def interview(student_type):
             artifact.save()
         elif student_type:
             # Sample an artifact for the student
+            pdb.set_trace()
             artifact = Artifact.select().where(
                 Artifact.artifact_level == student_type
-            ).order_by(fn.Random()).limit(1).get_or_none()
+            ).order_by(rand_fn()).limit(1).get_or_none()
 
             if not artifact:
                 return jsonify({

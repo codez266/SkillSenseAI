@@ -24,6 +24,9 @@ class Artifact(BaseModel):
     created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
     updated_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
 
+    class Meta:
+        table_name = 'Artifact'
+
 class InterviewConversation(BaseModel):
     conversation_k_cs = CharField(column_name='conversation_KCs', null=True)
     conversation_id = AutoField()
