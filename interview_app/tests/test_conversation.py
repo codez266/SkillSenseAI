@@ -29,6 +29,7 @@ def interview_conversation_helper(app, client, policy_id):
     mock_question = "What is lists in Python?"
     mock_answer = "Lists are a data structure in Python that allows you to store multiple items in a single variable."
     reference_answer = "A list is a python data structure that allows you to store multiple items in a single variable."
+    mock_simulated_answer = "Mock simulated answer"
 
     knowledge_profile.get_next_interaction = MagicMock(
         return_value=ResponseData(
@@ -51,10 +52,15 @@ def interview_conversation_helper(app, client, policy_id):
         return_value=policy_id
     )
 
-    response = client.get("/api/interview/beginner")
-    assert response.status_code == 201
+    simulator.get_student_response = MagicMock(
+        name="get_student_response",
+        return_value=mock_simulated_answer
+    )
+
+    response = client.get("/api/interview/beginner", follow_redirects=True)
+    assert response.status_code == 200
     data = response.get_json()
-    assert "student_id" in data
+    assert "interview_student_id" in data
     assert "interview_id" in data
 
     interview_id = data['interview_id']
@@ -62,15 +68,18 @@ def interview_conversation_helper(app, client, policy_id):
     response = client.get(f"/api/conversation/interviewer/{interview_id}")
     assert response.status_code == 200
     data = response.get_json()
-    assert data["question"] == mock_question
-    assert data["metadata"]["concepts"] == {'name': '', 'score': 0.0}
+
+    assert data["suggested_conversations"][0]["conversation_response"] == mock_question
+    assert "question_rationale" in data["suggested_conversations"][0]["conversation_metadata"]
+    assert simulator.get_last_turn_number(interview_id) == 0
 
     # A second call to the same endpoint should return the same question
     response = client.get(f"/api/conversation/interviewer/{interview_id}")
     assert response.status_code == 200
     data = response.get_json()
-    assert data["question"] == mock_question
-    assert data["metadata"]["concepts"] == {'name': '', 'score': 0.0}
+    assert data["suggested_conversations"][0]["conversation_response"] == mock_question
+    assert "question_rationale" in data["suggested_conversations"][0]["conversation_metadata"]
+    assert simulator.get_last_turn_number(interview_id) == 0
 
     response  = client.post(f"/api/conversation/student/{interview_id}", json={
         "response": mock_answer
@@ -79,15 +88,23 @@ def interview_conversation_helper(app, client, policy_id):
     assert "processed_answer" in data
     assert data["processed_answer"] == mock_answer
     assert data["reference_answer"] == reference_answer
+    assert simulator.get_last_turn_number(interview_id) == 1
 
     # A second call to the same endpoint should return the answer
-    response  = client.post(f"/api/conversation/student/{interview_id}", json={
-        "response": mock_answer
-    })
+    response  = client.get(f"/api/conversation/student/{interview_id}")
     data = response.get_json()
     assert "processed_answer" in data
     assert data["processed_answer"] == mock_answer
     assert data["reference_answer"] == reference_answer
+    assert simulator.get_last_turn_number(interview_id) == 1
+
+    response = client.get(f"/api/conversation/interviewer/{interview_id}")
+    response  = client.get(f"/api/conversation/student/{interview_id}")
+    data = response.get_json()
+    assert "processed_answer" in data
+    assert data["processed_answer"] == mock_simulated_answer
+    assert data["reference_answer"] == reference_answer
+    assert simulator.get_last_turn_number(interview_id) == 3
 
     # return mock_question, mock_answer, reference_answer, reference_kcs
 

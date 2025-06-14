@@ -57,6 +57,8 @@ def create_app(test_config=None):
     app.config["SESSION_COOKIE_SAMESITE"] = "None"
     app.config["SESSION_COOKIE_SECURE"] = True
 
+    app.logger.setLevel(app.config["LOG_LEVEL"])
+
     from db import db_utils
     db_utils.init_app(app)
 

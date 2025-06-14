@@ -1,7 +1,7 @@
 import json
 import os
 import importlib.resources
-# from functools import wraps
+from html import escape
 
 from peewee import *
 from db.models import StudentArtifact, StudentInterviewRecord, Student, InterviewConversation, Artifact, database_proxy
@@ -46,7 +46,6 @@ def init_real_db(config=None):
     'PIPES_AS_CONCAT', 'use_unicode': True, 'host': config.get('db', 'host'),
     'user': config.get('db', 'user'), 'password': config.get('db', 'password')})
     database_proxy.initialize(db)
-    database_proxy.initialize(db)
     # db = ReconnectMySQLDatabase('adaptive_learning_concepts', **{
     #     'charset': 'utf8',
     #     'sql_mode': 'PIPES_AS_CONCAT',
@@ -88,6 +87,12 @@ def init_memory_db(reset=False):
         populate_test_db()
     return db
 
+def format_problem_html(problem):
+    title_html = f"<h4>{escape(problem['title'])}</h4>"
+    description_html = f"<p>{escape(problem['description'])}</p>"
+    question_html = f"<p>Q. {escape(problem['question'])}</p>"
+    return f"{title_html}\n{description_html}\n{question_html}"
+
 def write_student_artifact():
     problem_records = []
     data = json.loads((importlib.resources.files("adaptive_concept_selection.resources.json") / "output_all.json").read_text())
@@ -102,11 +107,17 @@ def write_student_artifact():
             student = Student.get_or_none(Student.student_level==level)
             student_id = student.student_type_id
             problem_records.append((problem_statement, problem_solution, problem_kcs, student_id))
-            artifacts.append((level, problem_statement, problem_solution))
+            # artifacts.append((level, problem_statement, problem_solution))
     StudentArtifact.insert_many(problem_records, fields=[
         StudentArtifact.problem_statement, StudentArtifact.problem_solution,
         StudentArtifact.extracted_kcs,
         StudentArtifact.student_id]).execute()
+
+    ds_data = json.loads((importlib.resources.files("adaptive_concept_selection.resources.json") / "ds_problems.json").read_text())
+    for problem in ds_data["problems"]:
+        problem_statement = format_problem_html(problem)
+        problem_solution = problem["solution"]
+        artifacts.append(("beginner", problem_statement, problem_solution))
     Artifact.insert_many(artifacts, fields=[
         Artifact.artifact_level, Artifact.artifact_problem, Artifact.artifact_value]).execute()
 
@@ -115,9 +126,9 @@ def write_student_profile():
     steve = json.loads((importlib.resources.files("adaptive_concept_selection.resources.json") / "knowledge_steve.json").read_text())
     emma = json.loads((importlib.resources.files("adaptive_concept_selection.resources.json") / "knowledge_emma.json").read_text())
     # john beginner, steve intermediate, emma advanced
-    student_data = [(", ".join(john["mastered_concepts"]), "beginner"),
-                    (", ".join(steve["mastered_concepts"]), "intermediate"),
-                    (", ".join(emma["mastered_concepts"]), "expert"),]
+    student_data = [(json.dumps(john["mastered_concepts"]), "beginner"),
+                    (json.dumps(steve["mastered_concepts"]), "intermediate"),
+                    (json.dumps(emma["mastered_concepts"]), "expert"),]
     recs = Student.insert_many(student_data, fields = [Student.student_k_cs, Student.student_level]).execute()
 
 def populate_test_db():

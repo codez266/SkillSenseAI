@@ -20,6 +20,7 @@ class Artifact(BaseModel):
     artifact_level = CharField(null=True)
     artifact_metadata = UnknownField(null=True)  # json
     artifact_problem = CharField(null=True)
+    artifact_valid = IntegerField(constraints=[SQL("DEFAULT 0")], null=True)
     artifact_value = TextField(null=True)
     created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
     updated_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)

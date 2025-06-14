@@ -1,3 +1,5 @@
+import logging
+
 from config import CONFIG
 
 def inject_ini_config(cls):
@@ -19,6 +21,7 @@ class DevelopmentConfig(AppConfig):
     TESTING = True
     DATABASE = 'agent.db'
     TEMPLATES_AUTO_RELOAD = True
+    LOG_LEVEL = logging.DEBUG
 
 @inject_ini_config
 class TestingConfig(AppConfig):
@@ -26,11 +29,12 @@ class TestingConfig(AppConfig):
     TESTING = True
     DATABASE = ':memory:'
     SECRET_KEY = 'test_key'
+    LOG_LEVEL = logging.DEBUG
 
 @inject_ini_config
 class ProductionConfig(AppConfig):
     TEMPLATES_AUTO_RELOAD = True
-    pass
+    LOG_LEVEL = logging.INFO
 
 config = {
     'development': DevelopmentConfig,
