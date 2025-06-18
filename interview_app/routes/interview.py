@@ -136,6 +136,20 @@ def end_interview(interview_id):
         current_app.logger.error(f"Error ending interview: {str(e)}")
         return jsonify({'error': 'Failed to end interview'}), 500
 
+@bp.route('/conversation/interviewer/select_suggested_conversation/<int:interview_id>/<int:conv_index>', methods=['GET'])
+def mark_as_responded(interview_id, conv_index):
+    try:
+        simulator = current_app.config["simulator"]
+        simulator.initialize_db_proxy(current_app.db)
+        obs, _ = simulator.reset(interview_id)
+        last_turn_number = simulator.get_last_turn_number(interview_id)
+        simulator.mark_selected_conversation_as_responded(interview_id, last_turn_number, conv_index)
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        current_app.logger.error(f"Error marking as responded: {str(e)}")
+        return jsonify({'error': 'Failed to mark as responded'}), 500
+
+
 @bp.route('/conversation/interviewer/<int:interview_id>', methods=['GET'])
 def conversation_interviewer(interview_id):
     try:
@@ -165,7 +179,7 @@ def conversation_interviewer(interview_id):
     obs, _, done, _, _ = simulator.step(turn_id=0)
 
     turn_number = simulator.get_last_turn_number(interview_id)
-    simulator.mark_selected_conversation_as_responded(interview_id, turn_number, 0)
+    # simulator.mark_selected_conversation_as_responded(interview_id, turn_number, 0)
 
     # If the interview is done, we need to redirect to the end of the interview.
     if done:
@@ -206,8 +220,11 @@ def conversation_student(interview_id):
     # This will resume the experiment with the given interview_id
     obs, _ = simulator.reset(interview_id)
     obs, _, done, _, _ = simulator.step(action=student_answer, turn_id=1)
-
+    turn_number = simulator.get_last_turn_number(interview_id)
     conversations = obs["conversation_history_data"]
+    conversations = [conv for conv in conversations if conv.conversation_turn_number == turn_number]
+
+    # conversations = obs["conversation_history_data"]
 
     last_response = conversations[-1] if conversations else None
     last_reply = last_response.conversation_response if last_response else None
