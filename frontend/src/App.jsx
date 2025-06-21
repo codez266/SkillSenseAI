@@ -672,7 +672,7 @@ function InterviewPage() {
                     {isSimulating ? 'Simulating...' :
                      isFetchingInterviewerResponse ? 'Getting Response...' :
                      isSelectingSuggestion ? 'Select a suggestion...' :
-                     (messages.length > 0 && messages[messages.length - 1].turn_id === 1) ? 'Get Next Question' :
+                     (messages.length > 0 && messages[messages.length - 1].turn_id === 1) || (messages.length==0) ? 'Get Next Question' :
                      'Simulate Response'}
                   </Button>
                 </Box>
