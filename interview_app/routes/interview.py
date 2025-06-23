@@ -2,7 +2,7 @@ import ast
 import logging
 import json
 import traceback
-
+import random
 from peewee import fn, OperationalError, InterfaceError
 from adaptive_concept_selection.db.db_utils import init_test_db
 from adaptive_concept_selection.question_generation.question_generation_cg import SimulatedStudentExperiment, StudentArtifactData
@@ -66,6 +66,8 @@ def interview(student_type):
                 'error': 'Either student type is required or artifact data needs to be posted.'
             }), 400
 
+        interview_policy = random.choice(current_app.config["ALLOWED_POLICIES"])
+        args["interview_policy"] = interview_policy
         simulator = current_app.config["simulator"]
         simulator.initialize_db_proxy(current_app.db)
         interview_record, current_knowledge_state, knowledge_profile, G, student, artifact = simulator.create_and_initialize_interview(**args)

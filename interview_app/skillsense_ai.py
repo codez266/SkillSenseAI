@@ -2,7 +2,7 @@ import pdb
 import os
 import logging
 from logging.config import dictConfig
-
+import json
 from adaptive_concept_selection.question_generation.question_generation_cg import SimulatedStudentExperiment
 from db.config import CONFIG
 from db.db_utils import tables
@@ -52,6 +52,7 @@ def create_app(test_config=None):
     #db_wrapper = FlaskDB(app, database)
 
     is_production = False
+    app.config["ALLOWED_POLICIES"] = json.loads(CONFIG.get("app", "allowed_policies"))
     if test_config is None:
         # load the instance config, if it exists, when not testing
         app.config.from_object(config['production'])
