@@ -81,6 +81,11 @@ def interview_conversation_helper(app, client, policy_id):
     assert "question_rationale" in data["suggested_conversations"][0]["conversation_metadata"]
     assert simulator.get_last_turn_number(interview_id) == 0
 
+    response = client.get(f"/api/conversation/interviewer/select_suggested_conversation/{interview_id}/0")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["status"] == "success"
+
     response  = client.post(f"/api/conversation/student/{interview_id}", json={
         "response": mock_answer
     })
@@ -99,6 +104,11 @@ def interview_conversation_helper(app, client, policy_id):
     assert simulator.get_last_turn_number(interview_id) == 1
 
     response = client.get(f"/api/conversation/interviewer/{interview_id}")
+    response = client.get(f"/api/conversation/interviewer/select_suggested_conversation/{interview_id}/0")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["status"] == "success"
+
     response  = client.get(f"/api/conversation/student/{interview_id}")
     data = response.get_json()
     assert "processed_answer" in data

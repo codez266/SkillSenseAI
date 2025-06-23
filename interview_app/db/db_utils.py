@@ -4,15 +4,16 @@ import importlib.resources
 from html import escape
 
 from peewee import *
-from db.models import StudentArtifact, StudentInterviewRecord, Student, InterviewConversation, Artifact, database_proxy
+from db.models import Experiment, StudentArtifact, StudentInterviewRecord, Student, InterviewConversation, Artifact, database_proxy
 from db.config import CONFIG
+from adaptive_concept_selection.utils.data_extraction_utilities import get_kcs
 # from db.connection_pool import ReconnectMySQLDatabase
 
 from flask import current_app, g
 
 import click
 
-tables_alllocal = [StudentArtifact, StudentInterviewRecord, Student, InterviewConversation, Artifact]
+tables_alllocal = [Experiment, StudentArtifact, StudentInterviewRecord, Student, InterviewConversation, Artifact]
 tables = tables_alllocal
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -113,22 +114,22 @@ def write_student_artifact():
         StudentArtifact.extracted_kcs,
         StudentArtifact.student_id]).execute()
 
-    ds_data = json.loads((importlib.resources.files("adaptive_concept_selection.resources.json") / "ds_problems.json").read_text())
+    ds_data = json.loads((importlib.resources.files(
+        "adaptive_concept_selection.resources.json") / "ds_problems.json").read_text())
     for problem in ds_data["problems"]:
         problem_statement = format_problem_html(problem)
         problem_solution = problem["solution"]
-        artifacts.append(("beginner", problem_statement, problem_solution))
+        level = problem["level"]
+        artifacts.append((level, problem_statement, problem_solution))
     Artifact.insert_many(artifacts, fields=[
         Artifact.artifact_level, Artifact.artifact_problem, Artifact.artifact_value]).execute()
 
 def write_student_profile():
-    john = json.loads((importlib.resources.files("adaptive_concept_selection.resources.json") / "knowledge_john.json").read_text())
-    steve = json.loads((importlib.resources.files("adaptive_concept_selection.resources.json") / "knowledge_steve.json").read_text())
-    emma = json.loads((importlib.resources.files("adaptive_concept_selection.resources.json") / "knowledge_emma.json").read_text())
-    # john beginner, steve intermediate, emma advanced
-    student_data = [(json.dumps(john["mastered_concepts"]), "beginner"),
-                    (json.dumps(steve["mastered_concepts"]), "intermediate"),
-                    (json.dumps(emma["mastered_concepts"]), "expert"),]
+    kcs = get_kcs()
+    student_data = []
+    for level in ["beginner", "intermediate", "expert"]:
+        kcs_level = kcs[kcs[level] == 1]["concepts"].tolist()
+        student_data.append((json.dumps(kcs_level), level))
     recs = Student.insert_many(student_data, fields = [Student.student_k_cs, Student.student_level]).execute()
 
 def populate_test_db():

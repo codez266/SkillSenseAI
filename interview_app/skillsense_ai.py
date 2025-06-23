@@ -1,5 +1,6 @@
 import pdb
 import os
+import logging
 from logging.config import dictConfig
 
 from adaptive_concept_selection.question_generation.question_generation_cg import SimulatedStudentExperiment
@@ -16,28 +17,32 @@ from db.db_utils import get_db
 from defaultsettings import config
 from routes import interview, messages
 
-dictConfig({
-    'version': 1,
-    'formatters': {'default': {
-        'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
-    }},
-    'handlers': {'wsgi': {
-        'class': 'logging.StreamHandler',
-        'stream': 'ext://flask.logging.wsgi_errors_stream',
-        'formatter': 'default'
-    }},
-    'root': {
-        'level': 'INFO',
-        'handlers': ['wsgi']
-    }
-})
+# dictConfig({
+#     'version': 1,
+#     'formatters': {'default': {
+#         'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+#     }},
+#     'handlers': {'wsgi': {
+#         'class': 'logging.StreamHandler',
+#         'stream': 'ext://flask.logging.wsgi_errors_stream',
+#         'formatter': 'default'
+#     }},
+#     'root': {
+#         'level': 'INFO',
+#         'handlers': ['wsgi']
+#     }
+# })
 
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
+
+    cors_exclude_origins = [CONFIG.get("app", "cors_exclude_origins")]
+    cors_exclude_origins.extend(["http://localhost:5173",
+                                 "http://127.0.0.1:5173"])
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+            "origins": cors_exclude_origins,
             "methods": ["GET", "POST", "OPTIONS"],
             "allow_headers": ["Content-Type", "Accept"],
             "supports_credentials": True
@@ -51,6 +56,9 @@ def create_app(test_config=None):
         # load the instance config, if it exists, when not testing
         app.config.from_object(config['production'])
         is_production = True
+        gunicorn_logger = logging.getLogger('gunicorn.error')
+        app.logger.handlers.extend(gunicorn_logger.handlers)
+        app.logger.setLevel(gunicorn_logger.level)
     else:
         # load the test config if passed in
         app.config.from_object(test_config)
@@ -76,7 +84,9 @@ def create_app(test_config=None):
     else:
         app.db = init_real_db(config=CONFIG)
 
-    app.config["simulator"] = SimulatedStudentExperiment(logger=logger, db_config=CONFIG, simulation=False, llm_creds=creds_file, question_limit=int(CONFIG.get("app", "turns")), prod=is_production)
+    app.config["simulator"] = SimulatedStudentExperiment(
+        logger=logger,db=app.db, simulation=False, llm_creds=creds_file,
+        question_limit=int(CONFIG.get("app", "turns")), prod=is_production)
 
     # a simple page that says hello
     @app.route('/hello')

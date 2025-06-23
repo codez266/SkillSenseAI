@@ -155,9 +155,21 @@ data = response.json()
             "conversation_turn_id": 0,
             "conversation_response": "Can you explain the time complexity of your solution?",
             "conversation_reference": "The time complexity should be O(log n)",
-            "conversation_k_cs": {"algorithms": 0.8, "complexity_analysis": 0.9},
-            "conversation_reference_kcs": {"time_complexity": 1.0},
-            "conversation_metadata": {"question_type": "complexity_analysis"},
+            "conversation_k_cs": {
+                "concepts": [
+                    {
+                        "concept": "builtin_function_usage",
+                        "score": 0.997349328457229
+                    }
+                ]
+            },
+            "conversation_reference_kcs": null,
+            "conversation_metadata": {
+                "bloom_level": "Apply",
+                "line_no": null,
+                "question_rationale": "This question tests the candidate's understanding of using lambda functions for data validation and cleaning, specifically in the context of ensuring that 'user_id' values are digits, which is crucial for subsequent data processing steps.",
+                "question_text": "How does the lambda function within the 'apply' method contribute to data cleaning in the provided code snippet?"
+            },
             "conversation_responded": 0,
             "conversation_timestamp": "2025-06-16T14:31:00.000000",
             "conversation_turn_number": 1
@@ -201,44 +213,61 @@ data = response.json()
             "conversation_turn_id": 0,
             "conversation_response": "Can you explain the time complexity of your fibonacci function?",
             "conversation_reference": "The time complexity is O(2^n) due to redundant recursive calls",
-            "conversation_k_cs": {"algorithms": 0.8, "complexity_analysis": 0.9},
-            "conversation_reference_kcs": {"time_complexity": 1.0},
+            "conversation_k_cs": {
+                "concepts": [
+                    {
+                        "concept": "builtin_function_usage",
+                        "score": 0.997349328457229
+                    }
+                ]
+            },
+            "conversation_reference_kcs": null,
             "conversation_metadata": {
-                "question_type": "complexity_analysis",
-                "difficulty": "intermediate",
-                "concept": "time_complexity"
+                "bloom_level": "Apply",
+                "line_no": null,
+                "question_rationale": "This question tests the candidate's understanding of using lambda functions for data validation and cleaning, specifically in the context of ensuring that 'user_id' values are digits, which is crucial for subsequent data processing steps.",
+                "question_text": "How does the lambda function within the 'apply' method contribute to data cleaning in the provided code snippet?"
             },
             "conversation_responded": 0,
             "conversation_timestamp": "2025-06-16T14:32:00.000000",
             "conversation_turn_number": 2
         },
         {
-            "conversation_id": 16,
-            "conversation_interview_id": 123,
-            "conversation_turn_id": 0,
-            "conversation_response": "How would you optimize this recursive solution?",
-            "conversation_reference": "Use memoization or dynamic programming to avoid redundant calculations",
-            "conversation_k_cs": {"algorithms": 0.9, "optimization": 0.8},
-            "conversation_reference_kcs": {"dynamic_programming": 1.0, "memoization": 0.9},
-            "conversation_metadata": {
-                "question_type": "optimization",
-                "difficulty": "advanced",
-                "concept": "dynamic_programming"
-            },
-            "conversation_responded": 0,
-            "conversation_timestamp": "2025-06-16T14:32:00.000000",
-            "conversation_turn_number": 2
+            ...
         }
     ],
     "status": "success"
 }
 ```
 
-#### 5. Submit Student Response
+#### 5. Select Suggested Conversation
+
+**GET** `/api/conversation/interviewer/select_suggested_conversation/<int:interview_id>/<int:conv_index>`
+
+Marks a specific suggested conversation as selected by the user. This route must be called before submitting a student response to indicate which question from the suggested conversations was chosen. The `conv_index` parameter represents the index of the selected question in the array of suggested conversations.
+
+```python
+import requests
+
+interview_id = 123
+conv_index = 0  # Index of the selected question (0 for first question, 1 for second, etc.)
+
+response = requests.get(f'http://localhost:5000/api/conversation/interviewer/select_suggested_conversation/{interview_id}/{conv_index}')
+data = response.json()
+```
+
+**Example Response:**
+```json
+{
+    "status": "success"
+}
+```
+
+#### 6. Submit Student Response
 
 **POST** `/api/conversation/student/<interview_id>`
 
-Submits a student's response to the interviewer's question. Returns processed feedback and reference answers.
+Submits a student's response to the interviewer's question. **Note:** This route should be called after selecting a suggested conversation using the previous route. Returns processed feedback and reference answers.
 
 ```python
 import requests
@@ -258,16 +287,20 @@ data = response.json()
     "processed_answer": "The student incorrectly identified the time complexity. The fibonacci function has exponential time complexity O(2^n) due to redundant recursive calls.",
     "reference_answer": "The time complexity is O(2^n) because each call spawns two more recursive calls, creating an exponential tree of computations.",
     "metadata": {
-        "student_understanding": "incorrect",
-        "reasoning_quality": "attempted",
-        "concept_mastery": "needs_improvement",
-        "follow_up_needed": true
+        "answer_evaluation": "",
+        "changed_knowledge_state": {
+            "builtin_function_usage": 1,
+            "pd_data_cleaning": 1
+        },
+        "followup_needed": true,
+        "reasoning_quality": "The reasoning provided by the student is clear and well-articulated. They effectively use an example to explain how lambda functions can be used in data cleaning. Additionally, the student shows awareness of potential limitations regarding performance, although they admit to not having in-depth knowledge in that area.",
+        "student_understanding": "The student demonstrates a good understanding of the use of lambda functions within the 'apply' method for data cleaning tasks in pandas. They correctly identify that lambda functions allow for inline, element-wise operations which can be used for transforming or cleaning data. The student also acknowledges the use of lambda functions for making the code more concise and readable."
     },
     "status": "success"
 }
 ```
 
-#### 6. End Interview
+#### 7. End Interview
 
 **GET** `/api/conversation/interview/end/<interview_id>`
 
@@ -309,16 +342,21 @@ conversation_data = response.json()
 # Select the first suggested conversation
 suggested_question = conversation_data['suggested_conversations'][0]['conversation_response']
 
-# 3. Submit student answer
+# 3. Select suggested conversation
+conv_index = 0  # Index of the selected question (0 for first question, 1 for second, etc.)
+response = requests.get(f"{base_url}/conversation/interviewer/select_suggested_conversation/{interview_id}/{conv_index}")
+selected_data = response.json()
+
+# 4. Submit student answer
 answer_payload = {"response": "The time complexity is O(log n) because we eliminate half the search space each iteration."}
 response = requests.post(f"{base_url}/conversation/student/{interview_id}", json=answer_payload)
 answer_data = response.json()
 
-# 4. Get updated interview record
+# 5. Get updated interview record
 response = requests.get(f"{base_url}/interview/record/{interview_id}")
 updated_interview = response.json()
 
-# 5. End interview and get statistics
+# 6. End interview and get statistics
 response = requests.get(f"{base_url}/conversation/interview/end/{interview_id}")
 end_data = response.json()
 ```
@@ -359,11 +397,24 @@ end_data = response.json()
             "conversation_turn_id": 0,
             "conversation_response": "What is the time complexity of your binary search implementation?",
             "conversation_reference": "The time complexity is O(log n)",
-            "conversation_k_cs": {"algorithms": 0.9, "complexity_analysis": 0.8},
-            "conversation_reference_kcs": {"time_complexity": 1.0},
+            "conversation_k_cs": {
+                "concepts": [
+                    {
+                        "concept": "algorithms",
+                        "score": 0.9
+                    },
+                    {
+                        "concept": "complexity_analysis",
+                        "score": 0.8
+                    }
+                ]
+            },
+            "conversation_reference_kcs": null,
             "conversation_metadata": {
-                "question_type": "complexity_analysis",
-                "difficulty": "intermediate"
+                "bloom_level": "Apply",
+                "line_no": null,
+                "question_rationale": "This question tests the candidate's understanding of algorithmic complexity analysis, specifically in the context of binary search implementation.",
+                "question_text": "What is the time complexity of your binary search implementation?"
             },
             "conversation_responded": 0,
             "conversation_timestamp": "2025-06-16T15:01:00.000000",
@@ -374,21 +425,33 @@ end_data = response.json()
 }
 ```
 
-3. **Submit Answer Response:**
+3. **Select Suggested Conversation Response:**
+```json
+{
+    "status": "success"
+}
+```
+
+4. **Submit Answer Response:**
 ```json
 {
     "processed_answer": "The student correctly identified the logarithmic time complexity of binary search.",
     "reference_answer": "The time complexity is O(log n) because we eliminate half of the search space in each iteration.",
     "metadata": {
-        "student_understanding": "correct",
-        "reasoning_quality": "good",
-        "concept_mastery": "satisfactory"
+        "answer_evaluation": "",
+        "changed_knowledge_state": {
+            "algorithms": 1,
+            "complexity_analysis": 1
+        },
+        "followup_needed": false,
+        "reasoning_quality": "The student demonstrates clear understanding of binary search complexity by correctly identifying that we eliminate half the search space in each iteration.",
+        "student_understanding": "The student shows excellent grasp of algorithmic complexity analysis and binary search implementation."
     },
     "status": "success"
 }
 ```
 
-4. **End Interview Response:**
+5. **End Interview Response:**
 ```json
 {
     "status": "Interview ended successfully",

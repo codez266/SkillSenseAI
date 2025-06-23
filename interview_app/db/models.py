@@ -28,6 +28,15 @@ class Artifact(BaseModel):
     class Meta:
         table_name = 'Artifact'
 
+class Experiment(BaseModel):
+    experiment_created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    experiment_id = AutoField()
+    experiment_metadata = UnknownField(null=True)  # json
+    experiment_updated_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+
+    class Meta:
+        table_name = 'experiment'
+
 class InterviewConversation(BaseModel):
     conversation_k_cs = CharField(column_name='conversation_KCs', null=True)
     conversation_id = AutoField()
@@ -81,6 +90,7 @@ class StudentArtifact(BaseModel):
         table_name = 'student_artifact'
 
 class StudentInterviewRecord(BaseModel):
+    interview_experiment_id = IntegerField(null=True)
     interview_id = AutoField()
     interview_metadata = TextField(null=True)
     interview_problem_id = IntegerField(null=True)
