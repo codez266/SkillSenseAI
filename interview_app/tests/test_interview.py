@@ -11,7 +11,7 @@ def test_create_interview_existing_session(app, client):
     response1 = client.get('/api/interview/beginner', follow_redirects=True)
     assert response1.status_code == 200
     data1 = response1.get_json()
-
+    assert data1["interview_student_data"]["student_level"] == "beginner"
 
     # Second request should return same IDs
     response2 = client.get('/api/interview/record/{}'.format(data1['interview_id']), follow_redirects=True)
