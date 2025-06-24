@@ -17,7 +17,8 @@ bp = Blueprint('interview', __name__, url_prefix='/api')
 
 @bp.route('/interview', defaults={'student_type': None}, methods=['POST'])
 @bp.route('/interview/<string:student_type>', methods=['GET'])
-def interview(student_type):
+@bp.route('/interview/<string:student_type>/<int:interview_policy>', methods=['GET'])
+def interview(student_type, interview_policy=None):
     rand_fn = fn.Rand
     if current_app.config['TESTING']:
         rand_fn = fn.Random
@@ -58,6 +59,10 @@ def interview(student_type):
                 problem_solution=submitted_code
             )
             args["provided_artifact"] = student_artifact_data
+
+            # Get interview_policy from POST request body if provided
+            if 'interview_policy' in submitted_data:
+                interview_policy = submitted_data['interview_policy']
         elif student_type:
             student_level = student_type
             args["student_level"] = student_level
@@ -66,7 +71,9 @@ def interview(student_type):
                 'error': 'Either student type is required or artifact data needs to be posted.'
             }), 400
 
-        interview_policy = random.choice(current_app.config["ALLOWED_POLICIES"])
+        # Use provided interview_policy or randomly select one if not provided
+        if interview_policy is None:
+            interview_policy = random.choice(current_app.config["ALLOWED_POLICIES"])
         args["interview_policy"] = interview_policy
         simulator = current_app.config["simulator"]
         simulator.initialize_db_proxy(current_app.db)
@@ -240,3 +247,4 @@ def conversation_student(interview_id):
         "metadata": last_metadata,
         "status": "success"
     }), 200
+
