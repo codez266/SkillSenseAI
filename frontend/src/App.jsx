@@ -14,6 +14,10 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import { logger } from './logger'
 import './App.css'
 import NewInterviewPage from './pages/NewInterviewPage'
+import ConversationAnalysis from './components/ConversationAnalysis'
+
+// Global configuration
+const SHOW_CONVERSATION_ANALYSIS = false; // Set to false to hide the analysis section
 
 // const API_URL = 'http://127.0.0.1:9003';
 const API_URL = import.meta.env.VITE_FLASK_APP_URL;
@@ -338,13 +342,13 @@ function InterviewPage() {
         {/* Left Panel */}
         <Grid item xs={12} md={6} sx={{ height: '100%', p: 3, display: 'flex', flexDirection: 'column' }}>
           {/* Problem Statement Section */}
-          <Box sx={{ mb: 3 }}>
+          <Box sx={{ mb: 3 }} height="30%">
             <Typography variant="h6" gutterBottom sx={{ color: '#1976d2' }}>
               Problem Statement
             </Typography>
             <Paper sx={{ p: 2, bgcolor: '#f8f9fa' }}>
               <Typography
-                variant="body1"
+                variant="body2"
                 component="div"
                 dangerouslySetInnerHTML={{ __html: problemStatement }}
                 sx={{
@@ -364,9 +368,9 @@ function InterviewPage() {
           </Box>
 
           {/* Code Editor Section */}
-          <Box sx={{ height: '40%', mb: 3 }}>
+          <Box sx={{ height: '75%', mb: 3 }}>
             <Typography variant="h6" gutterBottom sx={{ color: '#1976d2' }}>
-              Code Editor {interviewData && `(Session: ${interviewData.interview_id})`}
+              Student solution {interviewData && `(Session: ${interviewData.interview_id})`}
             </Typography>
             <Box sx={{
               height: 'calc(100% - 40px)',
@@ -393,89 +397,9 @@ function InterviewPage() {
           </Box>
 
           {/* Additional Information Section */}
-          <Box sx={{
-            flex: 1,
-            bgcolor: '#f8f9fa',
-            borderRadius: 2,
-            p: 2,
-            overflowY: 'auto'
-          }}>
-            <Typography variant="h6" gutterBottom sx={{ color: '#1976d2' }}>
-              Conversation Analysis
-            </Typography>
-            {conversationHistory.length > 0 ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {conversationHistory.map((item, index) => (
-                  <Paper key={index} sx={{ p: 2, bgcolor: 'white' }}>
-                    {item.type === 'student' ? (
-                      <>
-                        <Typography variant="subtitle2" color="primary" gutterBottom>
-                          Student Response Analysis
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                          Processed Answer: {item.processed_answer}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Reference Answer: {item.reference_answer}
-                        </Typography>
-                      </>
-                    ) : (
-                      <>
-                        <Typography variant="subtitle2" color="primary" gutterBottom>
-                          Interviewer Question Analysis
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                          {/* Bloom's Level Tag */}
-                          <Chip
-                            label={item.bloom_level}
-                            size="small"
-                            sx={{
-                              bgcolor: item.bloom_level === 'Analyze' ? '#e8f5e9' : '#fff3e0',
-                              color: item.bloom_level === 'Analyze' ? '#2e7d32' : '#ef6c00',
-                              fontWeight: 'medium',
-                              '&:hover': {
-                                bgcolor: item.bloom_level === 'Analyze' ? '#c8e6c9' : '#ffe0b2'
-                              }
-                            }}
-                          />
-                          {/* Concept Tags */}
-                          {item.concepts.map((concept, idx) => (
-                            <Chip
-                              key={idx}
-                              label={concept.name}
-                              size="small"
-                              sx={{
-                                bgcolor: '#e3f2fd',
-                                color: '#1976d2',
-                                '&:hover': {
-                                  bgcolor: '#bbdefb'
-                                }
-                              }}
-                            />
-                          ))}
-                        </Box>
-                        <Typography variant="body2" color="text.secondary">
-                          Rationale: {item.rationale}
-                        </Typography>
-                      </>
-                    )}
-                  </Paper>
-                ))}
-              </Box>
-            ) : (
-              <>
-                <Typography variant="body2" color="text.secondary" component="div">
-                  This section will show analysis of the conversation:
-                </Typography>
-                <ul style={{ marginLeft: '20px', marginTop: '8px', color: 'text.secondary' }}>
-                  <li>Student response analysis</li>
-                  <li>Interviewer question analysis</li>
-                  <li>Concept coverage</li>
-                  <li>Learning progress</li>
-                </ul>
-              </>
-            )}
-          </Box>
+          {SHOW_CONVERSATION_ANALYSIS && (
+            <ConversationAnalysis conversationHistory={conversationHistory} />
+          )}
         </Grid>
 
         {/* Conversation Panel */}
@@ -672,7 +596,7 @@ function InterviewPage() {
                     {isSimulating ? 'Simulating...' :
                      isFetchingInterviewerResponse ? 'Getting Response...' :
                      isSelectingSuggestion ? 'Select a suggestion...' :
-                     (messages.length > 0 && messages[messages.length - 1].turn_id === 1) || (messages.length==0) ? 'Get Next Question' :
+                     (messages.length > 0 && messages[messages.length - 1].turn_id === 1) || (messages.length==0) ? 'Get Next Questions' :
                      'Simulate Response'}
                   </Button>
                 </Box>
@@ -720,36 +644,39 @@ function InterviewPage() {
   )
 }
 
+// Shared function for creating interviews
+const createInterview = async (level = 'beginner', navigate) => {
+  try {
+    logger.info(`Creating ${level} level interview...`);
+    const response = await fetch(`${API_URL}/api/interview/${level}/3`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      mode: 'cors'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to create ${level} level interview session`);
+    }
+
+    const data = await response.json();
+    logger.info(`${level} level interview created, id:`, data.interview_id);
+    navigate(`/interview/${data.interview_id}`);
+  } catch (err) {
+    console.error(`Error creating ${level} level interview:`, err);
+    // Navigate to home page on error
+    navigate('/');
+  }
+};
+
 function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const createNewInterview = async () => {
-      try {
-        logger.info('Fetching interview data from home page...');
-        const response = await fetch(`${API_URL}/api/interview/beginner`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          credentials: 'include',
-          mode: 'cors'
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to create interview session');
-        }
-
-        const data = await response.json();
-        logger.info('Interview data fetched, id:', data.interview_id);
-        navigate(`/interview/${data.interview_id}`);
-      } catch (err) {
-        console.error('Error creating interview:', err);
-      }
-    };
-
-    createNewInterview();
+    createInterview('beginner', navigate);
   }, [navigate]);
 
   return (
@@ -764,11 +691,32 @@ function HomePage() {
   );
 }
 
+function LevelInterviewPage() {
+  const { level } = useParams();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    createInterview(level, navigate);
+  }, [level, navigate]);
+
+  return (
+    <Box sx={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100vh'
+    }}>
+      <Typography variant="h6">Creating {level} level interview...</Typography>
+    </Box>
+  );
+}
+
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/:level" element={<LevelInterviewPage />} />
         <Route path="/interview/new" element={<NewInterviewPage />} />
         <Route path="/interview/:interviewId" element={<InterviewPage />} />
       </Routes>
