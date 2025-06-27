@@ -22,7 +22,7 @@ def interview(student_type, interview_policy=None):
     rand_fn = fn.Rand
     if current_app.config['TESTING']:
         rand_fn = fn.Random
-    types = ['beginner', 'intermediate', 'advanced']
+    types = ['beginner', 'intermediate', 'expert']
     # If student type is provided in a route, it should be one of the types.
     # If not provided, a student with a None type is created to be estimated later.
     # TODO: populate problem from the request, or load from a random sample of # problems from the db.
@@ -157,6 +157,21 @@ def mark_as_responded(interview_id, conv_index):
     except Exception as e:
         current_app.logger.error(f"Error marking as responded: {str(e)}")
         return jsonify({'error': 'Failed to mark as responded'}), 500
+
+@bp.route('/conversation/student/select_reference_concepts/<int:interview_id>', methods=['GET'])
+def select_reference_concepts(interview_id):
+    try:
+        concepts = request.args.get("concepts")
+        simulator = current_app.config["simulator"]
+        simulator.initialize_db_proxy(current_app.db)
+        obs, _ = simulator.reset(interview_id)
+        last_turn_number = simulator.get_last_turn_number(interview_id)
+        # TODO: use the simulator to select the reference concepts.
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        current_app.logger.error(f"Error selecting reference concepts: {str(e)}")
+        return jsonify({'error': 'Failed to select reference concepts'}), 500
+
 
 
 @bp.route('/conversation/interviewer/<int:interview_id>', methods=['GET'])

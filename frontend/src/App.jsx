@@ -74,7 +74,8 @@ function InterviewPage() {
           text: conv.conversation_response,
           sender: 'user',
           timestamp: conv.conversation_timestamp,
-          turn_id: conv.conversation_turn_id
+          turn_id: conv.conversation_turn_id,
+          reference_concepts: conv.conversation_reference_kcs.concepts
         });
 
         // Add student metadata
@@ -524,6 +525,25 @@ function InterviewPage() {
                         />
                       </Box>
                     )}
+                    {/* {message.reference_concepts && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                        {message.reference_concepts.map((concept, idx) => (
+                          <Chip
+                            key={idx}
+                            label={concept}
+                            size="small"
+                            sx={{
+                              bgcolor: message.sender === 'user' ? 'rgba(255,255,255,0.9)' : '#e3f2fd',
+                              color: message.sender === 'user' ? '#9c27b0' : '#1976d2',
+                              border: message.sender === 'user' ? '1px solid rgba(255,255,255,0.3)' : 'none',
+                              '&:hover': {
+                                bgcolor: message.sender === 'user' ? 'rgba(255,255,255,1)' : '#bbdefb'
+                              }
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    )} */}
                     {message.isSuggestion && (
                       <Box sx={{
                         position: 'absolute',
@@ -645,10 +665,10 @@ function InterviewPage() {
 }
 
 // Shared function for creating interviews
-const createInterview = async (level = 'beginner', navigate) => {
+const createInterview = async (level = 'beginner', policy = 0, navigate) => {
   try {
     logger.info(`Creating ${level} level interview...`);
-    const response = await fetch(`${API_URL}/api/interview/${level}/3`, {
+    const response = await fetch(`${API_URL}/api/interview/${level}/${policy}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -663,10 +683,10 @@ const createInterview = async (level = 'beginner', navigate) => {
     }
 
     const data = await response.json();
-    logger.info(`${level} level interview created, id:`, data.interview_id);
+    logger.info(`${level} level interview created with policy ${policy}, id:`, data.interview_id);
     navigate(`/interview/${data.interview_id}`);
   } catch (err) {
-    console.error(`Error creating ${level} level interview:`, err);
+    console.error(`Error creating ${level} level interview with policy ${policy}:`, err);
     // Navigate to home page on error
     navigate('/');
   }
@@ -676,7 +696,7 @@ function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    createInterview('beginner', navigate);
+    createInterview('beginner', 0, navigate);
   }, [navigate]);
 
   return (
@@ -692,12 +712,14 @@ function HomePage() {
 }
 
 function LevelInterviewPage() {
-  const { level } = useParams();
+  const { level, policy } = useParams();
   const navigate = useNavigate();
 
+  const actualPolicy = policy ? parseInt(policy) : 0;
+
   useEffect(() => {
-    createInterview(level, navigate);
-  }, [level, navigate]);
+    createInterview(level, actualPolicy, navigate);
+  }, [level, actualPolicy, navigate]);
 
   return (
     <Box sx={{
@@ -706,7 +728,7 @@ function LevelInterviewPage() {
       alignItems: 'center',
       height: '100vh'
     }}>
-      <Typography variant="h6">Creating {level} level interview...</Typography>
+      <Typography variant="h6">Creating {level} level interview with policy {actualPolicy}...</Typography>
     </Box>
   );
 }
@@ -717,6 +739,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/:level" element={<LevelInterviewPage />} />
+        <Route path="/:level/:policy" element={<LevelInterviewPage />} />
         <Route path="/interview/new" element={<NewInterviewPage />} />
         <Route path="/interview/:interviewId" element={<InterviewPage />} />
       </Routes>

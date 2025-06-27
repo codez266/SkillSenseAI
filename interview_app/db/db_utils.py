@@ -120,9 +120,9 @@ def write_student_artifact():
         problem_statement = format_problem_html(problem)
         problem_solution = problem["solution"]
         level = problem["level"]
-        artifacts.append((level, problem_statement, problem_solution))
+        artifacts.append((level, problem_statement, problem_solution, 1))
     Artifact.insert_many(artifacts, fields=[
-        Artifact.artifact_level, Artifact.artifact_problem, Artifact.artifact_value]).execute()
+        Artifact.artifact_level, Artifact.artifact_problem, Artifact.artifact_value, Artifact.artifact_valid]).execute()
 
 def write_student_profile():
     kcs = get_kcs()
