@@ -63,6 +63,7 @@ def create_app(test_config=None):
     else:
         # load the test config if passed in
         app.config.from_object(test_config)
+        app.logger.setLevel(app.config["LOG_LEVEL"])
     app.config["SESSION_COOKIE_SAMESITE"] = "None"
     app.config["SESSION_COOKIE_SECURE"] = True
 
