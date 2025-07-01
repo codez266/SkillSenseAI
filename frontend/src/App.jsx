@@ -425,12 +425,12 @@ function InterviewPage() {
                 <Avatar sx={{
                   width: 40,
                   height: 40,
-                  bgcolor: '#1976d2'
+                  bgcolor: '#9c27b0'
                 }}>
-                  <AccountCircleIcon />
+                  <PersonIcon />
                 </Avatar>
                 <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                  Interviewer
+                  Student
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', gap: 1 }}>
@@ -665,10 +665,16 @@ function InterviewPage() {
 }
 
 // Shared function for creating interviews
-const createInterview = async (level = 'beginner', policy = 0, navigate) => {
+const createInterview = async (level = 'beginner', policy = 0, artifact_id = null, navigate) => {
   try {
     logger.info(`Creating ${level} level interview...`);
-    const response = await fetch(`${API_URL}/api/interview/${level}/${policy}`, {
+    let api_url;
+    if (artifact_id != null) {
+      api_url = `${API_URL}/api/interview/${level}/${policy}/${artifact_id}`;
+    } else {
+      api_url = `${API_URL}/api/interview/${level}/${policy}`;
+    }
+    const response = await fetch(api_url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -696,7 +702,7 @@ function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    createInterview('beginner', 0, navigate);
+    createInterview('beginner', 0, null, navigate);
   }, [navigate]);
 
   return (
@@ -712,14 +718,14 @@ function HomePage() {
 }
 
 function LevelInterviewPage() {
-  const { level, policy } = useParams();
+  const { level, policy, artifact_id } = useParams();
   const navigate = useNavigate();
 
   const actualPolicy = policy ? parseInt(policy) : 0;
 
   useEffect(() => {
-    createInterview(level, actualPolicy, navigate);
-  }, [level, actualPolicy, navigate]);
+    createInterview(level, actualPolicy, artifact_id, navigate);
+  }, [level, actualPolicy, artifact_id, navigate]);
 
   return (
     <Box sx={{
@@ -740,6 +746,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/:level" element={<LevelInterviewPage />} />
         <Route path="/:level/:policy" element={<LevelInterviewPage />} />
+        <Route path="/:level/:policy/:artifact_id" element={<LevelInterviewPage />} />
         <Route path="/interview/new" element={<NewInterviewPage />} />
         <Route path="/interview/:interviewId" element={<InterviewPage />} />
       </Routes>
