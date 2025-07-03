@@ -162,20 +162,19 @@ def mark_as_responded(interview_id, conv_index):
         current_app.logger.error(f"Error marking as responded: {str(e)}")
         return jsonify({'error': 'Failed to mark as responded'}), 500
 
-@bp.route('/conversation/student/select_reference_concepts/<int:interview_id>', methods=['GET'])
-def select_reference_concepts(interview_id):
+@bp.route('/conversation/student/select_reference_concepts/<int:interview_id>/<int:turn_number>', methods=['GET'])
+def select_reference_concepts(interview_id, turn_number):
     try:
-        concepts = request.args.get("concepts")
+        concepts = request.args.getlist("concepts")
         simulator = current_app.config["simulator"]
         simulator.initialize_db_proxy(current_app.db)
         obs, _ = simulator.reset(interview_id)
         last_turn_number = simulator.get_last_turn_number(interview_id)
-        # TODO: use the simulator to select the reference concepts.
+        simulator.select_reference_concepts_for_conversation(interview_id, turn_number, concepts)
         return jsonify({'status': 'success'}), 200
     except Exception as e:
         current_app.logger.error(f"Error selecting reference concepts: {str(e)}")
         return jsonify({'error': 'Failed to select reference concepts'}), 500
-
 
 
 @bp.route('/conversation/interviewer/<int:interview_id>', methods=['GET'])
@@ -215,13 +214,7 @@ def conversation_interviewer(interview_id):
 
     conversations = obs["conversation_history_data"]
     suggested_conversations = [conv.model_dump() for conv in conversations if conv.conversation_turn_number == turn_number]
-    # last_response = conversations[-1] if conversations else None
-    # last_reply = last_response.conversation_response if last_response else None
-    # last_metadata = json.loads(
-    #     last_response.conversation_metadata if last_response else {})
-    # last_metadata["student_artifact"] = obs["interview_data"].interview_artifact.problem_solution
 
-    # Return the question
     return jsonify({
         "suggested_conversations": suggested_conversations,
         "status": "success"
@@ -255,15 +248,10 @@ def conversation_student(interview_id):
     # conversations = obs["conversation_history_data"]
 
     last_response = conversations[-1] if conversations else None
-    last_reply = last_response.conversation_response if last_response else None
-    reference_answer = last_response.conversation_reference if last_response else None
-    last_metadata = last_response.conversation_metadata
+
+    response = {"status": "success"}
+    response.update(last_response.model_dump())
 
     # Return the question
-    return jsonify({
-        "processed_answer": last_reply,
-        "reference_answer": reference_answer,
-        "metadata": last_metadata,
-        "status": "success"
-    }), 200
+    return jsonify(response), 200
 

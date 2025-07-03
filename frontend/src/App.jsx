@@ -15,7 +15,8 @@ import { logger } from './logger'
 import './App.css'
 import NewInterviewPage from './pages/NewInterviewPage'
 import ConversationAnalysis from './components/ConversationAnalysis'
-
+import ChatMessages from './components/ChatMessages'
+import DraftMessages from './components/DraftMessages'
 // Global configuration
 const SHOW_CONVERSATION_ANALYSIS = false; // Set to false to hide the analysis section
 
@@ -75,7 +76,9 @@ function InterviewPage() {
           sender: 'user',
           timestamp: conv.conversation_timestamp,
           turn_id: conv.conversation_turn_id,
-          reference_concepts: conv.conversation_reference_kcs.concepts
+          turn_number: conv.conversation_turn_number,
+          reference_concepts: conv.conversation_reference_kcs.concepts,
+          selected_concepts: conv.conversation_metadata.labeled_concepts || []
         });
 
         // Add student metadata
@@ -176,6 +179,29 @@ function InterviewPage() {
     try {
       setIsFetchingInterviewerResponse(true);
       setIsSelectingSuggestion(true);
+      if (messages.length > 0 && messages[messages.length - 1].turn_id === 1) {
+        const lastTurnNumber = messages[messages.length - 1].turn_number;
+        const selectedConcepts = messages[messages.length - 1].selected_concepts || [];
+
+        if (selectedConcepts.length > 0) {
+          const params = new URLSearchParams();
+          selectedConcepts.forEach(concept => params.append('concepts', concept));
+          logger.info('Selected concepts: ' + selectedConcepts);
+
+          const selectConceptResponse = await fetch(`${API_URL}/api/conversation/student/select_reference_concepts/${interviewData.interview_id}/${lastTurnNumber}?${params.toString()}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            }
+          });
+
+          if (!selectConceptResponse.ok) {
+            throw new Error('Failed to select reference concepts for turn number: ' + lastTurnNumber);
+          }
+        }
+      }
+
       // Then get interviewer's response
       const interviewerResponse = await fetch(`${API_URL}/api/conversation/interviewer/${interviewData.interview_id}`, {
         method: 'GET',
@@ -295,17 +321,20 @@ function InterviewPage() {
 
       // Add student response to chat
       setMessages(prevMessages => [...prevMessages, {
-        text: studentData.processed_answer,
+        text: studentData.conversation_response,
         sender: 'user',
         timestamp: 'now',
-        turn_id: 1
+        turn_id: 1,
+        turn_number: studentData.conversation_turn_number,
+        reference_concepts: studentData.conversation_reference_kcs.concepts,
+        selected_concepts: studentData.conversation_metadata.labeled_concepts || []
       }]);
 
       // Add student response metadata to conversation history
       setConversationHistory(prev => [...prev, {
         type: 'student',
-        processed_answer: studentData.processed_answer,
-        reference_answer: studentData.reference_answer,
+        processed_answer: studentData.conversation_response,
+        reference_answer: studentData.conversation_reference,
         turn_id: 1
       }]);
 
@@ -315,6 +344,26 @@ function InterviewPage() {
     } finally {
       setIsSimulating(false);
     }
+  }
+
+  const handleConceptSelect = (messageIdx, conceptIdx) => {
+    setMessages(prevMessages => {
+      return prevMessages.map((msg, idx) => {
+        if (idx !== messageIdx) return msg;
+        const concept = msg.reference_concepts[conceptIdx];
+        const selected_concepts = msg.selected_concepts || [];
+        let newSelected;
+        if (selected_concepts.includes(concept)) {
+          newSelected = selected_concepts.filter(c => c !== concept);
+        } else {
+          newSelected = [...selected_concepts, concept];
+        }
+        return {
+          ...msg,
+          selected_concepts: newSelected
+        };
+      });
+    });
   }
 
   // Show error if interview creation failed
@@ -460,125 +509,11 @@ function InterviewPage() {
                 borderRadius: '4px',
               },
             }}>
-              {messages.map((message, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    display: 'flex',
-                    flexDirection: message.sender === 'user' ? 'row-reverse' : 'row',
-                    alignItems: 'flex-start',
-                    mb: 2,
-                    gap: 1
-                  }}
-                >
-                  <Avatar sx={{
-                    width: 24,
-                    height: 24,
-                    bgcolor: message.sender === 'user' ? '#9c27b0' : '#1976d2'
-                  }}>
-                    {message.sender === 'user' ? <PersonIcon /> : <AccountCircleIcon />}
-                  </Avatar>
-                  <Box
-                    sx={{
-                      maxWidth: '70%',
-                      p: 1.2,
-                      borderRadius: 1,
-                      bgcolor: message.sender === 'user' ? '#9c27b0' : '#f5f5f5',
-                      color: message.sender === 'user' ? 'white' : 'text.primary',
-                      position: 'relative',
-                      cursor: message.isSuggestion ? 'pointer' : 'default',
-                      ...(message.isSuggestion && {
-                        bgcolor: '#ffffff',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                        border: '1px solid #e0e0e0',
-                        transform: 'translateY(0)',
-                        transition: 'all 0.2s ease-in-out',
-                        '&:hover': {
-                          transform: 'translateY(-4px)',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                          borderColor: '#9c27b0',
-                          bgcolor: '#fafafa'
-                        }
-                      })
-                    }}
-                    onClick={() => message.isSuggestion && handleSelectSuggestion(message.suggestionIndex)}
-                  >
-                    <Typography variant="body2">{message.text}</Typography>
-                    {message.bloom_level && (
-                      <Box sx={{
-                        display: 'flex',
-                        justifyContent: 'flex-end',
-                        mt: 1
-                      }}>
-                        <Chip
-                          label={message.bloom_level}
-                          size="small"
-                          sx={{
-                            height: '20px',
-                            fontSize: '0.7rem',
-                            bgcolor: message.bloom_level === 'Analyze' ? '#e8f5e9' : '#fff3e0',
-                            color: message.bloom_level === 'Analyze' ? '#2e7d32' : '#ef6c00',
-                            '&:hover': {
-                              bgcolor: message.bloom_level === 'Analyze' ? '#c8e6c9' : '#ffe0b2'
-                            }
-                          }}
-                        />
-                      </Box>
-                    )}
-                    {/* {message.reference_concepts && (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                        {message.reference_concepts.map((concept, idx) => (
-                          <Chip
-                            key={idx}
-                            label={concept}
-                            size="small"
-                            sx={{
-                              bgcolor: message.sender === 'user' ? 'rgba(255,255,255,0.9)' : '#e3f2fd',
-                              color: message.sender === 'user' ? '#9c27b0' : '#1976d2',
-                              border: message.sender === 'user' ? '1px solid rgba(255,255,255,0.3)' : 'none',
-                              '&:hover': {
-                                bgcolor: message.sender === 'user' ? 'rgba(255,255,255,1)' : '#bbdefb'
-                              }
-                            }}
-                          />
-                        ))}
-                      </Box>
-                    )} */}
-                    {message.isSuggestion && (
-                      <Box sx={{
-                        position: 'absolute',
-                        top: -8,
-                        right: -8,
-                        bgcolor: '#9c27b0',
-                        color: 'white',
-                        borderRadius: '50%',
-                        width: 24,
-                        height: 24,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.8rem',
-                        fontWeight: 'bold',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                      }}>
-                        {message.suggestionIndex + 1}
-                      </Box>
-                    )}
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        position: 'absolute',
-                        bottom: -20,
-                        right: message.sender === 'user' ? 0 : 'auto',
-                        left: message.sender === 'assistant' ? 0 : 'auto',
-                        color: 'text.secondary'
-                      }}
-                    >
-                      {message.timestamp}
-                    </Typography>
-                  </Box>
-                </Box>
-              ))}
+              <ChatMessages
+                messages={messages}
+                onSelectSuggestion={handleSelectSuggestion}
+                onConceptSelect={handleConceptSelect}
+              />
             </Box>
 
             {/* Input Area */}
@@ -626,23 +561,30 @@ function InterviewPage() {
                   bgcolor: '#f5f5f5',
                   borderRadius: 2,
                   p: 1,
-                  opacity: 0.5,
-                  pointerEvents: 'none'
+                  opacity: 0.8,
+                  // pointerEvents: 'none'
                 }}>
-                  <TextField
-                    fullWidth
-                    variant="standard"
-                    placeholder="Chat disabled - Use the button above"
-                    value=""
-                    InputProps={{
-                      disableUnderline: true
-                    }}
-                    sx={{
-                      '& .MuiInputBase-root': {
-                        padding: '4px 8px',
-                      }
-                    }}
-                  />
+                  {suggestedReplies.length > 0 ? (
+                    <DraftMessages
+                      messages={suggestedReplies}
+                      onSelectSuggestion={handleSelectSuggestion}
+                    />
+                  ) : (
+                    <TextField
+                      fullWidth
+                      variant="standard"
+                      placeholder="Chat disabled - Use the button above"
+                      value=""
+                      InputProps={{
+                        disableUnderline: true
+                      }}
+                      sx={{
+                        '& .MuiInputBase-root': {
+                          padding: '4px 8px',
+                        }
+                      }}
+                    />
+                  )}
                   <IconButton
                     color="primary"
                     disabled
