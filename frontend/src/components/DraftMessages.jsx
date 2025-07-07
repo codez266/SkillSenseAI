@@ -39,27 +39,43 @@ function DraftMessages({ messages, onSelectSuggestion }) {
               onClick={() => onSelectSuggestion(index)}
             >
               <Typography variant="body2">{message.conversation_response}</Typography>
-              {message.conversation_metadata.bloom_level && (
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  mt: 1
-                }}>
-                  <Chip
-                    label={message.conversation_metadata.bloom_level}
-                    size="small"
-                    sx={{
-                      height: '20px',
-                      fontSize: '0.7rem',
-                      bgcolor: message.conversation_metadata.bloom_level === 'Analyze' ? '#e8f5e9' : '#fff3e0',
-                      color: message.conversation_metadata.bloom_level === 'Analyze' ? '#2e7d32' : '#ef6c00',
-                      '&:hover': {
-                        bgcolor: message.conversation_metadata.bloom_level === 'Analyze' ? '#c8e6c9' : '#ffe0b2'
-                      }
-                    }}
-                  />
-                </Box>
-              )}
+              {(() => {
+                const bloomLevel = message.conversation_metadata.bloom_level;
+                const bloomLevelLower = bloomLevel ? bloomLevel.toLowerCase() : '';
+                return bloomLevel && (
+                  <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    mt: 1
+                  }}>
+                    <Chip
+                      label={bloomLevel}
+                      size="small"
+                      sx={{
+                        height: '20px',
+                        fontSize: '0.7rem',
+                        bgcolor:
+                          bloomLevelLower === 'analyze' ? '#e8f5e9' :
+                          bloomLevelLower === 'evaluate' ? '#e3f2fd' :
+                          bloomLevelLower === 'create' ? '#f3e5f5' :
+                          bloomLevelLower === 'apply' ? '#fff3e0' : '#eeeeee',
+                        color:
+                          bloomLevelLower === 'analyze' ? '#2e7d32' :
+                          bloomLevelLower === 'evaluate' ? '#1976d2' :
+                          bloomLevelLower === 'create' ? '#8e24aa' :
+                          bloomLevelLower === 'apply' ? '#ef6c00' : '#333',
+                        '&:hover': {
+                          bgcolor:
+                            bloomLevelLower === 'analyze' ? '#c8e6c9' :
+                            bloomLevelLower === 'evaluate' ? '#bbdefb' :
+                            bloomLevelLower === 'create' ? '#ce93d8' :
+                            bloomLevelLower === 'apply' ? '#ffe0b2' : '#e0e0e0'
+                        }
+                      }}
+                    />
+                  </Box>
+                );
+              })()}
 
                 <Box sx={{
                   position: 'absolute',

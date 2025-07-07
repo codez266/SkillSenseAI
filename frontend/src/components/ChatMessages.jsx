@@ -66,10 +66,22 @@ function ChatMessages({ messages, onSelectSuggestion, onConceptSelect }) {
                   sx={{
                     height: '20px',
                     fontSize: '0.7rem',
-                    bgcolor: message.bloom_level === 'Analyze' ? '#e8f5e9' : '#fff3e0',
-                    color: message.bloom_level === 'Analyze' ? '#2e7d32' : '#ef6c00',
+                    bgcolor:
+                      message.bloom_level === 'analyze' ? '#e8f5e9' :
+                      message.bloom_level === 'evaluate' ? '#e3f2fd' :
+                      message.bloom_level === 'create' ? '#f3e5f5' :
+                      message.bloom_level === 'apply' ? '#fff3e0' : '#eeeeee',
+                    color:
+                      message.bloom_level === 'analyze' ? '#2e7d32' :
+                      message.bloom_level === 'evaluate' ? '#1976d2' :
+                      message.bloom_level === 'create' ? '#8e24aa' :
+                      message.bloom_level === 'apply' ? '#ef6c00' : '#333',
                     '&:hover': {
-                      bgcolor: message.bloom_level === 'Analyze' ? '#c8e6c9' : '#ffe0b2'
+                      bgcolor:
+                        message.bloom_level === 'analyze' ? '#c8e6c9' :
+                        message.bloom_level === 'evaluate' ? '#bbdefb' :
+                        message.bloom_level === 'create' ? '#ce93d8' :
+                        message.bloom_level === 'apply' ? '#ffe0b2' : '#e0e0e0'
                     }
                   }}
                 />
@@ -79,6 +91,7 @@ function ChatMessages({ messages, onSelectSuggestion, onConceptSelect }) {
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                 {message.reference_concepts.map((concept, idx) => {
                   const isActiveMessage = messages.indexOf(message) === messages.length - 1;
+                  // const isActiveMessage = true;
                   const isSelected = message.selected_concepts.includes(concept);
                   return (
                     <Chip
@@ -87,12 +100,12 @@ function ChatMessages({ messages, onSelectSuggestion, onConceptSelect }) {
                       size="small"
                       onClick={isActiveMessage ? () => onConceptSelect(index, idx) : undefined}
                       sx={{
-                        bgcolor: isSelected ? 'rgb(167, 201, 247)' : 'white',
-                        border: '1px solid rgb(167, 201, 247)',
+                        bgcolor: !isActiveMessage ? 'lightgrey' : isSelected ? 'rgb(167, 201, 247)' : 'white',
+                        border: isActiveMessage ? '1px solid rgb(167, 201, 247)' : '',
                         '&:hover': isActiveMessage ? {
                           bgcolor: 'rgb(167, 201, 247)',
                           cursor: 'pointer'
-                        } : {},
+                        } : {}
                       }}
                     />
                   );
