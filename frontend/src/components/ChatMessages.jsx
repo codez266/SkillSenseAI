@@ -96,7 +96,7 @@ function ChatMessages({ messages, onSelectSuggestion, onConceptSelect }) {
                   return (
                     <Chip
                       key={idx}
-                      label={concept.replace('_', ' ')}
+                      label={concept.replaceAll('_', ' ')}
                       size="small"
                       onClick={isActiveMessage ? () => onConceptSelect(index, idx) : undefined}
                       sx={{

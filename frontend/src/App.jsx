@@ -289,6 +289,7 @@ function InterviewPage() {
 
       // Clear suggestions
       setSuggestedReplies([]);
+      handleSimulate();
     } catch (err) {
       console.error('Error marking suggestion as responded:', err);
       setError(err.message);
@@ -548,8 +549,8 @@ function InterviewPage() {
                       }
                     }}
                   >
-                    {isSimulating ? 'Simulating...' :
-                     isFetchingInterviewerResponse ? 'Getting Response...' :
+                    {isSimulating ? 'Receiving student response...' :
+                     isFetchingInterviewerResponse ? 'Getting question suggestions...' :
                      isSelectingSuggestion ? 'Select a suggestion...' :
                      (messages.length > 0 && messages[messages.length - 1].turn_id === 1) || (messages.length==0) ? 'Get Next Questions' :
                      'Simulate Response'}
@@ -682,8 +683,9 @@ function LevelInterviewPage() {
 }
 
 function App() {
+  const BASENAME = import.meta.env.VITE_ROUTER_BASENAME || '/';
   return (
-    <Router>
+    <Router basename={BASENAME}>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/:level" element={<LevelInterviewPage />} />
